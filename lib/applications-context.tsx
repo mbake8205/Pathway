@@ -6,6 +6,7 @@ import {
     getApplications,
     createApplication,
     updateApplicationStatus,
+    deleteApplication as deleteApplicationAction
 } from "@/lib/actions/job-application.actions"
 import { Status } from "@/types/types"
 
@@ -24,11 +25,13 @@ export type Application = {
 type ApplicationsContextType = {
     applications: Application[]
     loading: boolean
-    moveApplication: (id: string, status: Status) => void
+    moveApplication: (id: string, status: Status, interviewDate?: Date) => void
     selected: Application | null
     setSelected: React.Dispatch<React.SetStateAction<Application | null>>
     newOpen: boolean
     setNewOpen: React.Dispatch<React.SetStateAction<boolean>>
+    newUrl: string
+    setNewUrl: React.Dispatch<React.SetStateAction<string>>
     newCompany: string
     setNewCompany: React.Dispatch<React.SetStateAction<string>>
     newRole: string
@@ -36,6 +39,7 @@ type ApplicationsContextType = {
     addApplication: () => void
     dark: boolean
     setDark: React.Dispatch<React.SetStateAction<boolean>>
+    deleteApplication: (id: string) => Promise<void>
 }
 
 function toApplication(doc: any): Application {
@@ -76,6 +80,7 @@ export function ApplicationsProvider({ children }: { children: React.ReactNode }
     const [selected, setSelected] = React.useState<Application | null>(null)
     const [newOpen, setNewOpen] = React.useState(false)
     const [newCompany, setNewCompany] = React.useState("")
+    const [newUrl, setNewUrl] = React.useState("")
     const [newRole, setNewRole] = React.useState("")
     const [dark, setDark] = React.useState(true)
 
@@ -109,11 +114,11 @@ export function ApplicationsProvider({ children }: { children: React.ReactNode }
         document.documentElement.classList.toggle("light", !dark)
     }, [dark])
 
-    const moveApplication = async (id: string, status: Status) => {
+    const moveApplication = async (id: string, status: Status, interviewDate?: Date) => {
         setApplications((current) =>
             current.map((item) => (item.id === id ? { ...item, status } : item))
         )
-        await updateApplicationStatus(id, status)
+        await updateApplicationStatus(id, status, interviewDate)
     }
 
     const addApplication = async () => {
@@ -123,6 +128,7 @@ export function ApplicationsProvider({ children }: { children: React.ReactNode }
             clerkId: userId,
             company: newCompany.trim(),
             role: newRole.trim(),
+            url: newUrl.trim()
         })
 
         if (result.success) {
@@ -131,9 +137,14 @@ export function ApplicationsProvider({ children }: { children: React.ReactNode }
 
         setNewCompany("")
         setNewRole("")
+        setNewUrl("")
         setNewOpen(false)
     }
 
+    const deleteApplication = async (id: string) => {
+        setApplications((current) => current.filter((item) => item.id !== id)) // optimistic
+        await deleteApplicationAction(id)
+    }
     return (
         <ApplicationsContext.Provider
             value={{
@@ -144,6 +155,7 @@ export function ApplicationsProvider({ children }: { children: React.ReactNode }
                 newRole, setNewRole,
                 addApplication,
                 dark, setDark,
+                deleteApplication
             }}
         >
             {children}

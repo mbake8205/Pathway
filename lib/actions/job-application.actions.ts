@@ -34,6 +34,7 @@ export const createApplication = async (data: {
     location?: string;
     type?: string;
     notes?: string;
+    url?: string;
 }) => {
     try {
         await connectToDatabase();
@@ -62,15 +63,21 @@ export const createApplication = async (data: {
 
 export const updateApplicationStatus = async (
     applicationId: string,
-    status: Status
+    status: Status,
+    interviewDate?: Date
 ) => {
     try {
         await connectToDatabase();
 
+        const update: any = { status, statusDate: new Date() };
+        if (interviewDate) {
+            update.interviewDate = interviewDate;
+        }
+
         const updated = await JobApplication.findByIdAndUpdate(
             applicationId,
-            { status, statusDate: new Date() },
-            { new: true } // return the updated doc, not the old one
+            update,
+            { new: true }
         ).lean();
 
         if (!updated) {
@@ -83,6 +90,30 @@ export const updateApplicationStatus = async (
         };
     } catch (e) {
         console.error("Error updating application status", e);
+        return {
+            success: false as const,
+            error: e instanceof Error ? e.message : String(e),
+        };
+    }
+};
+
+export const getCalendarEvents = async (clerkId: string) => {
+    try {
+        await connectToDatabase();
+
+        const applications = await JobApplication.find({
+            clerkId,
+            interviewDate: { $exists: true, $ne: null },
+        })
+            .sort({ interviewDate: 1 })
+            .lean();
+
+        return {
+            success: true as const,
+            data: serializeData(applications),
+        };
+    } catch (e) {
+        console.error("Error fetching calendar events", e);
         return {
             success: false as const,
             error: e instanceof Error ? e.message : String(e),

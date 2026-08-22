@@ -11,6 +11,21 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { useApplications } from "@/lib/applications-context"
 import { Status } from "@/types/types"
 import {Show, SignInButton} from "@clerk/nextjs";
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+} from "@/components/ui/dialog"
+import { Label } from "@/components/ui/label"
 
 const columns: { status: Status; tone: string }[] = [
     { status: "Wishlist", tone: "bg-muted-foreground/40" },
@@ -21,13 +36,35 @@ const columns: { status: Status; tone: string }[] = [
 ]
 
 export default function ApplicationsPage() {
-    const { applications, loading, moveApplication, setSelected, setNewOpen } = useApplications()
+    const { applications, loading, moveApplication, setSelected, setNewOpen, deleteApplication } = useApplications()
     const [query, setQuery] = React.useState("")
     const [draggedId, setDraggedId] = React.useState<string | null>(null)
+
+    const [interviewPromptId, setInterviewPromptId] = React.useState<string | null>(null)
+    const [interviewDateInput, setInterviewDateInput] = React.useState("")
 
     const filtered = applications.filter((a) =>
         `${a.company} ${a.role} ${a.location}`.toLowerCase().includes(query.toLowerCase())
     )
+
+    const handleDrop = (status: Status) => {
+        if (draggedId === null) return
+
+        if (status === "Interview") {
+            // don't move yet — ask for the date first
+            setInterviewPromptId(draggedId)
+        } else {
+            moveApplication(draggedId, status)
+        }
+    }
+
+    const confirmInterviewDate = () => {
+        if (interviewPromptId && interviewDateInput) {
+            moveApplication(interviewPromptId, "Interview", new Date(interviewDateInput))
+        }
+        setInterviewPromptId(null)
+        setInterviewDateInput("")
+    }
 
     return (
         <>
@@ -99,7 +136,7 @@ export default function ApplicationsPage() {
                                 <div
                                     key={status}
                                     onDragOver={(e) => e.preventDefault()}
-                                    onDrop={() => draggedId !== null && moveApplication(draggedId, status)}
+                                    onDrop={() => handleDrop(status)}
                                     className="min-h-[300px] rounded-xl bg-muted/35 p-3"
                                 >
                                     <div className="mb-3 flex items-center justify-between">
@@ -132,8 +169,28 @@ export default function ApplicationsPage() {
                                                                 <p className="truncate text-sm font-semibold">{application.company}</p>
                                                                 <p className="truncate text-xs text-muted-foreground">{application.role}</p>
                                                             </div>
-                                                            <MoreHorizontal className="size-4 shrink-0 text-muted-foreground opacity-0 transition group-hover:opacity-100" />
-                                                        </div>
+                                                            <DropdownMenu>
+                                                                <DropdownMenuTrigger
+                                                                    render={
+                                                                        <Button
+                                                                            variant="ghost"
+                                                                            size="icon"
+                                                                            className="size-6 shrink-0 text-muted-foreground opacity-0 transition group-hover:opacity-100"
+                                                                            onClick={(e) => e.stopPropagation()}
+                                                                        >
+                                                                            <MoreHorizontal className="size-4" />
+                                                                        </Button>
+                                                                    }
+                                                                />
+                                                                <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
+                                                                    <DropdownMenuItem
+                                                                        className="text-destructive"
+                                                                        onClick={() => deleteApplication(application.id)}
+                                                                    >
+                                                                        Delete
+                                                                    </DropdownMenuItem>
+                                                                </DropdownMenuContent>
+                                                            </DropdownMenu>                                                        </div>
                                                         <p className="mt-3 truncate text-xs text-muted-foreground">{application.location}</p>
                                                         <div className="mt-3 flex items-center justify-between">
                                                             <span className="text-[11px] text-muted-foreground">{application.date}</span>
@@ -150,6 +207,39 @@ export default function ApplicationsPage() {
                     </div>
                 </div>
             )}
+            <Dialog open={interviewPromptId !== null} onOpenChange={(open) => !open && setInterviewPromptId(null)}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>When's the interview?</DialogTitle>
+                        <DialogDescription>
+                            Set a date so it shows up on your Calendar.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <div className="flex flex-col gap-2 py-2">
+                        <Label htmlFor="interview-date">Date & time</Label>
+                        <Input
+                            id="interview-date"
+                            type="datetime-local"
+                            value={interviewDateInput}
+                            onChange={(e) => setInterviewDateInput(e.target.value)}
+                        />
+                    </div>
+                    <DialogFooter>
+                        <Button
+                            variant="outline"
+                            onClick={() => {
+                                if (interviewPromptId) moveApplication(interviewPromptId, "Interview")
+                                setInterviewPromptId(null)
+                            }}
+                        >
+                            Skip
+                        </Button>
+                        <Button onClick={confirmInterviewDate} disabled={!interviewDateInput}>
+                            Save
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
         </>
     )
 }

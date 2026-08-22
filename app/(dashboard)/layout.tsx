@@ -28,6 +28,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 
 import { ApplicationsProvider, useApplications } from "@/lib/applications-context"
 import {useClerk, useUser, SignInButton, SignUpButton, Show} from "@clerk/nextjs";
+import {ContactsProvider} from "@/lib/contacts-context";
 
 
 const navItems = [
@@ -164,9 +165,18 @@ function Header() {
                     <TooltipContent>Toggle theme</TooltipContent>
                 </Tooltip>
 
-                <Button onClick={() => setNewOpen(true)} className="hidden gap-2 sm:flex">
-                    <Plus data-icon="inline-start" />New application
-                </Button>
+                <Show when="signed-in">
+                    <Button onClick={() => setNewOpen(true)} className="hidden gap-2 sm:flex">
+                        <Plus data-icon="inline-start" />New application
+                    </Button>
+                </Show>
+                <Show when="signed-out">
+                    <SignInButton mode="modal">
+                        <Button className="hidden gap-2 sm:flex">
+                            <Plus data-icon="inline-start" />New application
+                        </Button>
+                    </SignInButton>
+                </Show>
             </div>
         </header>
     )
@@ -178,6 +188,7 @@ function GlobalDialogs() {
         newOpen, setNewOpen,
         newCompany, setNewCompany,
         newRole, setNewRole,
+        newUrl, setNewUrl,
         addApplication,
     } = useApplications()
 
@@ -257,6 +268,10 @@ function GlobalDialogs() {
                             <label htmlFor="role" className="text-sm font-medium">Role</label>
                             <Input id="role" value={newRole} onChange={(e) => setNewRole(e.target.value)} placeholder="e.g. Product Designer" />
                         </div>
+                        <div className="flex flex-col gap-2">
+                            <label htmlFor="Job-URl" className="text-sm font-medium">Job-Url</label>
+                            <Input id="Job-URl" value={newUrl} onChange={(e) => setNewUrl(e.target.value)} placeholder="Application URL" />
+                        </div>
                     </div>
                     <DialogFooter>
                         <Button variant="outline" onClick={() => setNewOpen(false)}>Cancel</Button>
@@ -271,16 +286,18 @@ function GlobalDialogs() {
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
     return (
         <ApplicationsProvider>
-            <TooltipProvider>
-                <div className="min-h-screen bg-background text-foreground">
-                    <Sidebar />
-                    <main className="md:pl-64">
+            <ContactsProvider>
+                <TooltipProvider>
+                    <div className="min-h-screen bg-background text-foreground">
+                        <Sidebar />
+                        <main className="md:pl-64">
                         <Header />
                         <div className="mx-auto max-w-[1600px] p-4 md:p-8">{children}</div>
-                    </main>
-                    <GlobalDialogs />
-                </div>
-            </TooltipProvider>
+                        </main>
+                    <   GlobalDialogs />
+                        </div>
+                </TooltipProvider>
+            </ContactsProvider>
         </ApplicationsProvider>
     )
 }

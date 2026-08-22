@@ -16,3 +16,25 @@ export interface IJobApplication {
 }
 
 export type Status = "Wishlist" | "Applied" | "Interview" | "Offer" | "Rejected"
+
+export interface IContactInteraction {
+    _id: string;
+    note: string;
+    date: Date;
+}
+
+export interface IContact {
+    _id: string;
+    clerkId: string;
+    name: string;
+    role?: string;
+    company?: string;
+    email?: string;
+    linkedinUrl?: string;
+    applicationId?: string;
+    notes?: string;
+    lastContactedAt: Date;
+    interactions: IContactInteraction[];
+    createdAt: Date;
+    updatedAt: Date;
+}
